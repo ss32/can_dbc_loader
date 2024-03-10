@@ -45,6 +45,7 @@ int main(int argc, char ** argv)
   size_t message_attr_counter = 0;
   size_t signal_attr_counter = 0;
   size_t attr_def_default_counter = 0;
+  size_t signal_value_counter = 0;
 
   auto bus_nodes = dbc.getBusNodes();
   auto messages = dbc.getMessages();
@@ -68,6 +69,10 @@ int main(int argc, char ** argv)
     for (auto & sig : signals) {
       if (sig.second->getComment() != nullptr) {
         signal_comment_counter++;
+      }
+      const int num_values = sig.second->getValueDescriptions().size();
+      if (num_values != 0){
+        signal_value_counter += num_values;
       }
     }
   }
@@ -115,6 +120,7 @@ int main(int argc, char ** argv)
   std::cout << "Found " << bus_nodes.size() << " bus nodes.\n";
   std::cout << "Found " << dbc.getMessages().size() << " messages.\n";
   std::cout << "Found " << signal_counter << " signals.\n";
+  std::cout << "Found " << signal_value_counter << " signal values.\n";
 
   size_t total_comments = bus_node_comment_counter + message_comment_counter + signal_comment_counter;
 
