@@ -289,6 +289,8 @@ void Database::parse(std::istream & reader)
   std::vector<BusNodeComment> bus_node_comments;
   std::vector<MessageComment> message_comments;
   std::vector<SignalComment> signal_comments;
+  std::unordered_map<std::string, std::map<unsigned int, std::string>>
+      value_descs;
   std::unordered_map<std::string, std::pair<AttributeType, std::string>> attr_texts;
   std::unordered_map<std::string, std::string> attr_def_val_texts;
 
@@ -351,11 +353,11 @@ void Database::parse(std::istream & reader)
       } else if (preamble == PREAMBLES[6]) {  // SIGNAL VALUE LIST
         saveMsg(current_msg);
 
-        std::map<unsigned int, std::string> value_descs;
-
         std::string temp_string;
         std::string sig_name;
-
+        std::string current_char;
+        std::string current_name{};
+        unsigned int current_val{};
         // Message ID
         iss_line >> temp_string;
 
@@ -364,10 +366,18 @@ void Database::parse(std::istream & reader)
         // Signal Name
         iss_line >> sig_name;
 
-        // Get all remaining values up to the ending semicolon
-        std::getline(iss_line, temp_string, ';');
 
-        // TODO(jwhitleyastuff): Finish parsing values
+        // Probably a better way than this but it works
+        while (current_char != ";") {
+          // Breaks when hitting semicolon
+          iss_line >> current_char;
+          if (current_char == ";") {
+            break;
+          }
+          current_val = std::stoul(current_char);
+          iss_line >> current_name;
+          value_descs[sig_name][current_val] = current_name;
+        }
       } else if (preamble == PREAMBLES[7]) {  // ATTRIBUTE DEFINITION
         saveMsg(current_msg);
 
@@ -484,10 +494,23 @@ void Database::parse(std::istream & reader)
       } break;
     }
   }
+  // Assign value descriptions to each signal within the messages
+  for (auto &msg : messages_) {
+    for (auto &sig : msg.second.signals_) {
+      auto signame = sig.first;
+      if (value_descs.find(signame) == value_descs.end()) {
+        // The signal name doesn't have an entry in the value descriptions
+        continue;
+      } else {
+        const std::map<unsigned int, std::string> thismap =
+            value_descs[signame];
+        // Assign the current map to the signal value descriptions
+        sig.second.value_descs_ = thismap;
+      }
+    }
+  }
 
-  // TODO(jwhitleyastuff): Apply attributes to DB objects
-
-  // TODO(jwhitleyastuff): Add signal value description lists to signals
+  // TODO(jwhitleyastuff): Apply attributes to DB objects  
 }
 
 void Database::saveMsg(std::unique_ptr<Message> & msg_ptr)
